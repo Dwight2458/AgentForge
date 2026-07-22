@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.vscode
+**/.pytest_cache
+**/.ruff_cache
+**/__pycache__
+**/node_modules
+**/dist
+**/target
+**/.venv
+**/.agentforge
+docs/design
+

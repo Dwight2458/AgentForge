@@ -1,0 +1,22 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: agentforge
+servers: 1
+agents: 1
+image: rancher/k3s:v1.34.1-k3s1
+kubeAPI:
+  host: localhost
+  hostIP: 127.0.0.1
+  hostPort: "6550"
+ports:
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer
+options:
+  k3d:
+    wait: true
+    timeout: 120s
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true

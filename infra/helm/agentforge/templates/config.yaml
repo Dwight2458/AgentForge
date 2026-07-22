@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "agentforge.labels" . | nindent 4 }}
+data:
+  SPRING_DATASOURCE_URL: {{ .Values.config.databaseUrl | quote }}
+  SPRING_DATASOURCE_USERNAME: {{ .Values.config.databaseUser | quote }}
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: {{ .Values.config.kafkaBootstrapServers | quote }}
+  SPRING_DATA_REDIS_HOST: {{ .Values.config.redisHost | quote }}
+  SPRING_DATA_REDIS_PORT: {{ .Values.config.redisPort | quote }}
+  AGENTFORGE_CHECKPOINT_DATABASE_URL: {{ .Values.config.runtimeCheckpointDsn | quote }}
+  AGENTFORGE_S3_ENDPOINT: {{ .Values.config.s3Endpoint | quote }}
+  AGENTFORGE_DEV_AUTH: {{ .Values.config.devAuth | quote }}
+  GITHUB_APP_ID: {{ .Values.config.githubAppId | quote }}
+  GITHUB_APP_SLUG: {{ .Values.config.githubAppSlug | quote }}
+  GITHUB_API_VERSION: {{ .Values.config.githubApiVersion | quote }}
+---
+{{- if not .Values.secret.existingSecret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Release.Name }}-secrets
+  labels:
+    {{- include "agentforge.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  SPRING_DATASOURCE_PASSWORD: {{ .Values.secret.databasePassword | quote }}
+  SPRING_DATA_REDIS_PASSWORD: {{ .Values.secret.redisPassword | quote }}
+  AGENTFORGE_EXECUTOR_TOKEN: {{ .Values.secret.executorToken | quote }}
+  AGENTFORGE_MODEL_API_KEY: {{ .Values.secret.modelApiKey | quote }}
+  {{- with .Values.secret.githubClientId }}
+  SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_CLIENT_ID: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.secret.githubClientSecret }}
+  SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_CLIENT_SECRET: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.secret.githubPrivateKey }}
+  GITHUB_APP_PRIVATE_KEY: {{ . | quote }}
+  {{- end }}
+{{- end }}

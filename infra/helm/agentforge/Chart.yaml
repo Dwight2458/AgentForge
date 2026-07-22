@@ -1,0 +1,7 @@
+apiVersion: v2
+name: agentforge
+description: Local-first deployment of the AgentForge control plane and agent runtime
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+

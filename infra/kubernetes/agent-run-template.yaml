@@ -1,0 +1,77 @@
+# Rendered by the future RunProvisioner after replacing __RUN_ID__ and __EXECUTOR_IMAGE__.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentforge-run-__RUN_ID__
+  labels:
+    agentforge.dev/run: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: runner
+  namespace: agentforge-run-__RUN_ID__
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workspace
+  namespace: agentforge-run-__RUN_ID__
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: agentforge-run-__RUN_ID__
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: run
+  namespace: agentforge-run-__RUN_ID__
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 3600
+  ttlSecondsAfterFinished: 1800
+  template:
+    metadata:
+      labels:
+        agentforge.dev/run: __RUN_ID__
+    spec:
+      serviceAccountName: runner
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: executor
+          image: __EXECUTOR_IMAGE__
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          env:
+            - name: AGENTFORGE_WORKSPACE
+              value: /workspace
+          ports:
+            - name: http
+              containerPort: 8082
+          resources:
+            requests: { cpu: "1", memory: 2Gi }
+            limits: { cpu: "4", memory: 6Gi }
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: workspace
+
