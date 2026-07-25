@@ -8,6 +8,11 @@ data:
   SPRING_DATASOURCE_URL: {{ .Values.config.databaseUrl | quote }}
   SPRING_DATASOURCE_USERNAME: {{ .Values.config.databaseUser | quote }}
   SPRING_KAFKA_BOOTSTRAP_SERVERS: {{ .Values.config.kafkaBootstrapServers | quote }}
+  OUTBOX_ENABLED: {{ .Values.config.outboxEnabled | quote }}
+  KAFKA_CONSUMER_ENABLED: {{ .Values.config.kafkaConsumerEnabled | quote }}
+  RUN_COMMANDS_TOPIC: {{ .Values.config.runCommandsTopic | quote }}
+  RUN_EVENTS_TOPIC: {{ .Values.config.runEventsTopic | quote }}
+  KAFKA_CONSUMER_GROUP: {{ .Values.config.kafkaConsumerGroup | quote }}
   SPRING_DATA_REDIS_HOST: {{ .Values.config.redisHost | quote }}
   SPRING_DATA_REDIS_PORT: {{ .Values.config.redisPort | quote }}
   AGENTFORGE_CHECKPOINT_DATABASE_URL: {{ .Values.config.runtimeCheckpointDsn | quote }}
@@ -16,6 +21,10 @@ data:
   GITHUB_APP_ID: {{ .Values.config.githubAppId | quote }}
   GITHUB_APP_SLUG: {{ .Values.config.githubAppSlug | quote }}
   GITHUB_API_VERSION: {{ .Values.config.githubApiVersion | quote }}
+  AGENTFORGE_MODEL_PROVIDER: {{ .Values.config.modelProvider | quote }}
+  AGENTFORGE_MODEL_BASE_URL: {{ .Values.config.modelBaseUrl | quote }}
+  AGENTFORGE_MODEL: {{ .Values.config.model | quote }}
+  AGENTFORGE_MODEL_TIMEOUT_SECONDS: {{ .Values.config.modelTimeoutSeconds | quote }}
 ---
 {{- if not .Values.secret.existingSecret }}
 apiVersion: v1

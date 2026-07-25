@@ -21,6 +21,10 @@ public record AgentForgeProperties(
             int maxTokens,
             int maxParallelSubagents) {}
 
-    public record Messaging(boolean outboxEnabled) {}
+    public record Messaging(
+            boolean outboxEnabled,
+            boolean consumerEnabled,
+            String runCommandsTopic,
+            String runEventsTopic,
+            String consumerGroup) {}
 }
-

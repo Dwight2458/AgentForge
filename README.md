@@ -28,9 +28,13 @@ The repository now contains the first M0 vertical slice:
 - an authenticated, idempotent sandbox executor with workspace-confined file, shell, Git, and test tools;
 - GitHub OAuth login plus GitHub App installation/repository discovery, with repository-scoped installation tokens kept inside the control plane;
 - a Vue console for Projects → Grill → Run, using the real control-plane project API and retaining local fixtures only in development mode;
+- versioned Kafka event envelopes, a PostgreSQL Inbox projector, retry/DLT handling, and replayable SSE projections;
+- an OpenAI-compatible model gateway plus deterministic Fake Model-backed Function Calling for execution planning;
 - Docker images, local dependencies, a k3d profile, a Helm chart, and a hardened per-run Job template.
 
 The companion target application is the independent local repository `../AgentForge-DemoMall`. It contains a Spring Boot + Vue + PostgreSQL/Flyway baseline whose first intentionally missing feature is payment-status filtering.
+
+The current Week 3–4 event and model contracts are described in [`docs/week-3-4-foundation.md`](docs/week-3-4-foundation.md).
 
 ## Run locally
 

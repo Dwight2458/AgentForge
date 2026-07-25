@@ -25,6 +25,16 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:agentforge-control-plane-v1}
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        isolation.level: read_committed
+    listener:
+      ack-mode: record
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -56,7 +66,11 @@ agentforge:
     max-parallel-subagents: 3
   messaging:
     outbox-enabled: ${OUTBOX_ENABLED:false}
+    consumer-enabled: ${KAFKA_CONSUMER_ENABLED:false}
     outbox-delay: 500ms
+    run-commands-topic: ${RUN_COMMANDS_TOPIC:agentforge.run.commands.v1}
+    run-events-topic: ${RUN_EVENTS_TOPIC:agentforge.run.events.v1}
+    consumer-group: ${KAFKA_CONSUMER_GROUP:agentforge-control-plane-v1}
   github:
     api-base-url: ${GITHUB_API_BASE_URL:https://api.github.com}
     api-version: ${GITHUB_API_VERSION:2026-03-10}

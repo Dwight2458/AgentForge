@@ -24,6 +24,12 @@ public class OutboxEventEntity {
     @Column(name = "event_type", nullable = false)
     private String eventType;
 
+    @Column(name = "envelope_version", nullable = false)
+    private int envelopeVersion;
+
+    @Column(name = "correlation_id", nullable = false)
+    private String correlationId;
+
     @Column(nullable = false, columnDefinition = "text")
     private String payload;
 
@@ -40,6 +46,8 @@ public class OutboxEventEntity {
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
         this.eventType = eventType;
+        this.envelopeVersion = 1;
+        this.correlationId = aggregateId.toString();
         this.payload = payload;
         this.occurredAt = Instant.now();
     }
@@ -49,6 +57,8 @@ public class OutboxEventEntity {
     public String getAggregateType() { return aggregateType; }
     public UUID getAggregateId() { return aggregateId; }
     public String getEventType() { return eventType; }
+    public int getEnvelopeVersion() { return envelopeVersion; }
+    public String getCorrelationId() { return correlationId; }
     public String getPayload() { return payload; }
     public Instant getOccurredAt() { return occurredAt; }
     public Instant getPublishedAt() { return publishedAt; }

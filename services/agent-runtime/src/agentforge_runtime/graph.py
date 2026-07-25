@@ -5,6 +5,7 @@ from typing import Annotated, Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 from typing_extensions import NotRequired
 
+from .model_gateway import FunctionTool, ModelGateway, ModelGatewayError, ModelMessage, ModelRequest
 from .models import Evidence, ExecutionPlan, PlanStep, RequirementSpec, RunPhase, RunRequest, RunResult
 
 
@@ -24,6 +25,9 @@ class AgentRunState(TypedDict):
     actions: Annotated[list[str], append_items]
     unresolved_issues: NotRequired[list[str]]
     status: NotRequired[str]
+    model_calls: int
+    prompt_tokens: int
+    completion_tokens: int
 
 
 def analyze(state: AgentRunState) -> dict[str, Any]:
@@ -34,9 +38,37 @@ def analyze(state: AgentRunState) -> dict[str, Any]:
     }
 
 
-def plan(state: AgentRunState) -> dict[str, Any]:
+async def plan(state: AgentRunState, model_gateway: ModelGateway | None = None) -> dict[str, Any]:
     spec = RequirementSpec.model_validate(state["requirement_spec"])
-    execution_plan = ExecutionPlan(
+    if model_gateway is None:
+        execution_plan = fallback_plan(spec)
+        usage = {"model_calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
+        action = "Created dependency-aware execution plan"
+    else:
+        response = await model_gateway.complete(planning_request(spec))
+        call = next(
+            (item for item in response.tool_calls if item.name == "submit_execution_plan"),
+            None,
+        )
+        if call is None:
+            raise ModelGatewayError("Planner did not call submit_execution_plan")
+        execution_plan = ExecutionPlan.model_validate(call.arguments)
+        usage = {
+            "model_calls": state["model_calls"] + 1,
+            "prompt_tokens": state["prompt_tokens"] + response.usage.prompt_tokens,
+            "completion_tokens": state["completion_tokens"] + response.usage.completion_tokens,
+        }
+        action = "Created dependency-aware execution plan through the model gateway"
+    return {
+        "phase": RunPhase.IMPLEMENT,
+        "plan": execution_plan.model_dump(mode="json"),
+        "actions": [action],
+        **usage,
+    }
+
+
+def fallback_plan(spec: RequirementSpec) -> ExecutionPlan:
+    return ExecutionPlan(
         summary=f"Implement and verify: {spec.goal}",
         steps=[
             PlanStep(id="analyze", title="Inspect repository", agent="RepositoryAnalyst"),
@@ -55,11 +87,51 @@ def plan(state: AgentRunState) -> dict[str, Any]:
             ),
         ],
     )
-    return {
-        "phase": RunPhase.IMPLEMENT,
-        "plan": execution_plan.model_dump(mode="json"),
-        "actions": ["Created dependency-aware execution plan"],
-    }
+
+
+def planning_request(spec: RequirementSpec) -> ModelRequest:
+    plan_tool = FunctionTool(
+        name="submit_execution_plan",
+        description="Submit a dependency-aware implementation and verification plan.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string"},
+                "steps": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "title": {"type": "string"},
+                            "agent": {"type": "string"},
+                            "depends_on": {"type": "array", "items": {"type": "string"}},
+                            "verification": {"type": "array", "items": {"type": "string"}},
+                        },
+                        "required": ["id", "title", "agent", "depends_on", "verification"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["summary", "steps"],
+            "additionalProperties": False,
+        },
+    )
+    return ModelRequest(
+        messages=[
+            ModelMessage(
+                role="system",
+                content=(
+                    "You are AgentForge's planner. Produce a compact execution plan and "
+                    "return it only through the submit_execution_plan tool."
+                ),
+            ),
+            ModelMessage(role="user", content=spec.model_dump_json()),
+        ],
+        tools=[plan_tool],
+        tool_choice=plan_tool.name,
+        temperature=0,
+    )
 
 
 def implement(state: AgentRunState) -> dict[str, Any]:
@@ -123,10 +195,13 @@ def fail(state: AgentRunState) -> dict[str, Any]:
     }
 
 
-def build_execution_graph(checkpointer: Any = None):
+def build_execution_graph(checkpointer: Any = None, model_gateway: ModelGateway | None = None):
+    async def plan_node(state: AgentRunState) -> dict[str, Any]:
+        return await plan(state, model_gateway)
+
     builder = StateGraph(AgentRunState)
     builder.add_node("analyze", analyze)
-    builder.add_node("plan", plan)
+    builder.add_node("plan", plan_node)
     builder.add_node("implement", implement)
     builder.add_node("verify", verify)
     builder.add_node("repair", repair)
@@ -157,6 +232,9 @@ def initial_state(request: RunRequest) -> AgentRunState:
         "phase": RunPhase.ANALYZE,
         "repair_round": 0,
         "actions": [],
+        "model_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
     }
 
 
@@ -169,5 +247,7 @@ def to_result(state: AgentRunState) -> RunResult:
         repair_round=state["repair_round"],
         actions=state["actions"],
         unresolved_issues=state["unresolved_issues"],
+        model_calls=state["model_calls"],
+        prompt_tokens=state["prompt_tokens"],
+        completion_tokens=state["completion_tokens"],
     )
-

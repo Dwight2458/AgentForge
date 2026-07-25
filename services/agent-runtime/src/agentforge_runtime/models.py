@@ -57,6 +57,9 @@ class RunResult(BaseModel):
     repair_round: int
     actions: list[str]
     unresolved_issues: list[str]
+    model_calls: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
 
 
 class GrillRequest(BaseModel):
@@ -66,4 +69,3 @@ class GrillRequest(BaseModel):
 
 class GrillResponse(BaseModel):
     questions: list[str]
-

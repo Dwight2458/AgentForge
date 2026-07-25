@@ -21,3 +21,18 @@ def test_health_and_execution_endpoint() -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "SUCCEEDED"
+    assert response.json()["model_calls"] == 1
+
+
+def test_fake_model_completion_endpoint() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/internal/v1/model/complete",
+            json={
+                "messages": [{"role": "user", "content": "hello"}],
+                "tools": [],
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["content"] == "fake:hello"

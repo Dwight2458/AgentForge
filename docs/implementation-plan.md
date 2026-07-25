@@ -116,6 +116,17 @@
 - GitHub 真实 OAuth、App 安装和仓库导入的端到端验证仍依赖仓库所有者按 `docs/github-app-setup.md` 创建并配置自己的 GitHub App；私钥和 Client Secret 不写入仓库。
 - 下一阶段进入第 3–4 周，优先补齐 Inbox/版本化 Kafka Envelope、OpenAI 兼容模型网关和 Fake Model 确定性测试，再扩展现有 Grill、RequirementSpec、状态机、Outbox 与 SSE 的集成覆盖。
 
+### 第 3–4 周推进记录（2026-07-23）
+
+- 已完成 Event Envelope v1 与 JSON Schema，Outbox 不再发布裸 payload；事件 ID、聚合 ID、关联 ID、发生时间与 schemaVersion 均进入稳定契约。
+- 已完成 PostgreSQL Inbox 幂等投影：Kafka 数据库事务提交后再确认 offset，崩溃重投时由 `(consumer, event_id)` 去重；无效消息进入 DLT，瞬时错误最多重试三次。
+- 已完成 `RUN_STATUS_CHANGED` 消费、Run 状态机推进、RunEvent 持久化和 SSE 回放链路。
+- 已完成 OpenAI-compatible Chat Completions 模型网关、Function Calling 映射和确定性 Fake Model；LangGraph Plan 节点通过 `submit_execution_plan` 生成并校验 `ExecutionPlan`，同时累计模型调用和 Token 使用量。
+- 已补充真实 PostgreSQL/Testcontainers Inbox 测试、Envelope/消费者测试、OpenAI MockTransport 契约测试和 Fake Model 图执行测试。
+- 已完成 k3d 跨进程冒烟：重复投递同一个 Kafka Event 后 Inbox 与 RunEvent 均只写入一次，状态机正确推进且 SSE 可从序号 1 回放；Outbox 实际消息符合 Envelope v1。
+- 已修正 Docker Desktop 重启后的宿主服务寻址和 k3d 升级顺序：统一使用 `host.docker.internal`，Helm 更新后再强制滚动并等待新 Pod，避免旧 Pod 不健康时的 `--wait` 死锁。
+- 第 3–4 周剩余重点：由 Runtime 正式消费 `RUN_QUEUED`、发布完整状态事件，使用模型驱动 Grill/RequirementSpec，并补充自动化 Kafka/Testcontainers 跨进程 E2E 与控制面恢复测试。
+
 伴随仓库包含 Spring Boot + Vue + PostgreSQL/Flyway 小型商城，并预置稳定基线与任务分支：支付状态筛选、启动配置故障、依赖升级。测试栈使用 JUnit/Testcontainers、Vitest 和 Playwright。
 
 ## 五、测试与验收

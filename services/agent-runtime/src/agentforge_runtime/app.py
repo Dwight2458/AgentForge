@@ -8,21 +8,27 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from .config import get_settings
 from .graph import build_execution_graph, initial_state, to_result
 from .grill import generate_grill_questions
+from .model_gateway import ModelRequest, ModelResponse, create_model_gateway
 from .models import GrillRequest, GrillResponse, RunRequest, RunResult
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
-    if settings.checkpoint_database_url:
-        async with AsyncPostgresSaver.from_conn_string(settings.checkpoint_database_url) as checkpointer:
-            if settings.setup_checkpoint_schema:
-                await checkpointer.setup()
-            app.state.execution_graph = build_execution_graph(checkpointer)
+    model_gateway = create_model_gateway(settings)
+    app.state.model_gateway = model_gateway
+    try:
+        if settings.checkpoint_database_url:
+            async with AsyncPostgresSaver.from_conn_string(settings.checkpoint_database_url) as checkpointer:
+                if settings.setup_checkpoint_schema:
+                    await checkpointer.setup()
+                app.state.execution_graph = build_execution_graph(checkpointer, model_gateway)
+                yield
+        else:
+            app.state.execution_graph = build_execution_graph(InMemorySaver(), model_gateway)
             yield
-    else:
-        app.state.execution_graph = build_execution_graph(InMemorySaver())
-        yield
+    finally:
+        await model_gateway.aclose()
 
 
 app = FastAPI(
@@ -48,3 +54,7 @@ async def execute_run(payload: RunRequest, request: Request) -> RunResult:
     state = await request.app.state.execution_graph.ainvoke(initial_state(payload), config=config)
     return to_result(state)
 
+
+@app.post("/internal/v1/model/complete", response_model=ModelResponse)
+async def complete_model(payload: ModelRequest, request: Request) -> ModelResponse:
+    return await request.app.state.model_gateway.complete(payload)

@@ -116,7 +116,7 @@ try {
 
     $helmArguments = @(
         "upgrade", "--install", "agentforge", "infra/helm/agentforge",
-        "--namespace", "agentforge", "--create-namespace", "--wait", "--timeout", "5m"
+        "--namespace", "agentforge", "--create-namespace"
     )
     if ($resolvedValuesFile) {
         $helmArguments += @("--values", $resolvedValuesFile)

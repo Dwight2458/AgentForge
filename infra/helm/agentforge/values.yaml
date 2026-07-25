@@ -12,13 +12,18 @@ service:
   webPort: 80
 
 config:
-  databaseUrl: jdbc:postgresql://host.k3d.internal:5432/agentforge
+  databaseUrl: jdbc:postgresql://host.docker.internal:5432/agentforge
   databaseUser: agentforge
-  kafkaBootstrapServers: host.k3d.internal:29093
-  redisHost: host.k3d.internal
+  kafkaBootstrapServers: host.docker.internal:29093
+  outboxEnabled: true
+  kafkaConsumerEnabled: true
+  runCommandsTopic: agentforge.run.commands.v1
+  runEventsTopic: agentforge.run.events.v1
+  kafkaConsumerGroup: agentforge-control-plane-v1
+  redisHost: host.docker.internal
   redisPort: "6379"
-  s3Endpoint: http://host.k3d.internal:9000
-  runtimeCheckpointDsn: postgresql://agentforge:agentforge@host.k3d.internal:5432/agentforge
+  s3Endpoint: http://host.docker.internal:9000
+  runtimeCheckpointDsn: postgresql://agentforge:agentforge@host.docker.internal:5432/agentforge
   clusterDns: 10.43.0.10
   # Nginx's runtime resolver does not apply the pod DNS search suffixes.
   controlPlaneHost: agentforge-control-plane.agentforge.svc.cluster.local:8080
@@ -26,6 +31,10 @@ config:
   githubAppId: "0"
   githubAppSlug: ""
   githubApiVersion: "2026-03-10"
+  modelProvider: fake
+  modelBaseUrl: https://api.openai.com/v1
+  model: fake-planner-v1
+  modelTimeoutSeconds: "60"
 
 secret:
   existingSecret: ""

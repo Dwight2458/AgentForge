@@ -9,6 +9,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import io.agentforge.controlplane.domain.RunEventEntity;
@@ -34,7 +36,7 @@ public class RunEventService {
                 .map(event -> event.getSequence() + 1)
                 .orElse(1L);
         RunEventEntity saved = events.save(new RunEventEntity(runId, nextSequence, type, agent, summary, payload));
-        publish(saved);
+        publishAfterCommit(saved);
         return saved;
     }
 
@@ -57,6 +59,19 @@ public class RunEventService {
         runEmitters.forEach(emitter -> send(emitter, event));
     }
 
+    private void publishAfterCommit(RunEventEntity event) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            publish(event);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                publish(event);
+            }
+        });
+    }
+
     private void send(SseEmitter emitter, RunEventEntity event) {
         try {
             emitter.send(SseEmitter.event()
@@ -72,4 +87,3 @@ public class RunEventService {
         emitters.getOrDefault(runId, new CopyOnWriteArrayList<>()).remove(emitter);
     }
 }
-
